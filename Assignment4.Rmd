@@ -1,0 +1,155 @@
+---
+title: "Assignment4"
+author: "Tabea"
+date: "29 November 2018"
+output: 
+  html_document: 
+    keep_md: yes
+---
+#2
+```{r}
+alleles.diploid <- function(p0,w1,w2,w3,n=100,na.rm=TRUE) {
+  p<-rep(NA,n)
+  w_aver<-rep(NA,n)
+  #starting frequencies
+  p[1]<-p0 
+  w_aver[1]<-(((p[1]^2)*w1) + (2*p[1]*(1-p[1])*w2) + (((1-p[1])^2)*w3))
+  #loop
+  for(i in 2:n) {
+    w_aver[i-1]<-(((p[i-1]^2)*w1) + (2*p[i-1]*(1-p[i-1])*w2) + (((1-p[i-1])^2)*w3))
+    p[i]<-((p[i-1]^2)*(w1/w_aver[i-1])+(p[i-1]*(1-p[i-1])*(w2/w_aver[i-1])))
+  }
+  #output sentence and plot
+  if(any(p>0.9999)) {
+    fixationP<-min(which.max(p>0.9999))
+    cat("Fixation for A occurs approximately at generation:", fixationP)
+  } else if(any(p<0.0001)) {
+    fixationQ<-min(which.max(p<0.0001))
+    cat("Fixation for a occurs approximately at generation:", fixationQ)
+  } else {
+    maxAlleleFreq<-max(p)
+      cat("Fixation does not occur, max. allele frequency for A is:", print(maxAlleleFreq, digits = 2))
+  }
+  plot(x = 1:n, y = p,pch=20,ylab="allele frequency", xlab="generations")
+}
+
+combi1<-alleles.diploid(p0=0.5,w1=0.9,w2=0.7,w3=1)
+combi2<-alleles.diploid(p0=0.4,w1=0.8,w2=0.9,w3=0.6)
+combi3<-alleles.diploid(p0=0.5,w1=0.9,w2=0.8,w3=0.7)
+combi1
+combi2
+combi3
+```
+#3
+```{r}
+allele_counts <- function(number_alleles,A,n) {
+  allele_freq<-rep(NA,n)
+  #1st generation
+  allele_freq[1]<-A
+  for(i in 2:n) {
+   alleles<-sample(c("A","a"),
+           size=(number_alleles),
+           replace = TRUE,
+           prob=c(allele_freq[i-1], (1-allele_freq[i-1])))
+   allele_freq[i]<-sum(alleles=="A")/number_alleles
+  }
+   plot(x = 1:n, y = allele_freq,ylab="allele frequency", xlab="generations",type="l")
+   return(allele_freq)
+}
+
+allele_counts(20,0.3,50)
+allele_counts(20,0.5,100)
+
+```
+
+#4
+```{r}
+allele_counts_4 <- function(number_alleles,A,n) {
+  allele_freq<-rep(NA,n)
+  #1st generation
+  allele_freq[1]<-A
+  for(i in 2:n) {
+   alleles<-sample(c("A","a"),
+           size=(number_alleles),
+           replace = TRUE,
+           prob=c(allele_freq[i-1], (1-allele_freq[i-1])))
+   allele_freq[i]<-sum(alleles=="A")/number_alleles
+  }
+  return(allele_freq)
+}
+
+alleles_1000<- function(x,number_alleles,A,n) {
+  p<-replicate(x,allele_counts_4(number_alleles,A,n))
+  A_lost<-sum(p[100,]==0)/x
+  return(A_lost)
+}
+
+alleles_1000(1000,400,0.5,100)
+alleles_1000(1000,400,0.25,100)
+alleles_1000(1000,400,0.1,100)
+```
+
+#5
+```{r}
+plot(x=1,y=0,type="n",
+     xlab="Generation",ylab="Allele frequency",
+     xlim = c(0,100), ylim=c(0,1))
+allele_counts_5 <- function(number_alleles,A,n,x) {
+  allele_freq<-rep(NA,n)
+  #1st generation
+  allele_freq[1]<-A
+  for(i in 2:n) {
+   alleles<-sample(c("A","a"),
+           size=(number_alleles),
+           replace = TRUE,
+           prob=c(allele_freq[i-1], (1-allele_freq[i-1])))
+   allele_freq[i]<-sum(alleles=="A")/number_alleles
+  }
+  lines(allele_freq~c(1:x),col=sample(rainbow(6),1))
+}
+replicate(100,allele_counts_5(400,0.5,100,100))
+
+```
+
+#6
+```{r}
+set.seed(720) #confirm to always get the same results
+
+stochastics<-function(intercept,slope,l.o, sd0) {
+  x <- seq(from = 1, to = 10, length.out = l.o) 
+  a <- intercept
+  b <- slope 
+  y_deterministic <- a + b*x
+  y_simulated <- rnorm(length(x), mean = y_deterministic, sd = sd0)
+  mod_sim <- lm(y_simulated ~ x)
+  p_val_slope <- summary(mod_sim)$coef[2,4] # extracts the p-value
+  p_val_slope
+}
+
+stochastics(0.5,0.1,20,2)
+
+
+rep.stoch<-replicate(1000,stochastics(0.5,0.1,20,2))
+hist(rep.stoch)
+p_less0.05<-sum(rep.stoch<0.05)/length(rep.stoch)
+p_less0.05
+
+rep.stoch_2<-replicate(1000,stochastics(0.5,0,20,2))
+hist(rep.stoch_2)
+p_less0.05<-sum(rep.stoch_2<0.05)/length(rep.stoch_2)
+p_less0.05
+#The amount of p<0.05 is less
+
+sequence<-seq(10,100,5)
+p<-rep(NA,100*length(sequence))
+proportion<-sum(p<0.05)/length(p)
+
+for (i in 1:length(sequence)) {
+  p<-replicate(100,stochastics(0.5,0.1,sequence[i],1.5))
+  proportion[i]<-sum(p<0.05)/length(p)
+}
+
+plot(x=sequence,y=proportion)
+
+# The higher the sample  size, the more higher is the probability to have a value below 0.05 
+```
